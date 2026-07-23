@@ -55,7 +55,7 @@ needs_review and the sheet opens pre-filled for the user to confirm).
 ## Roadmap (build in this order — vertical slice, one path at a time)
 
 ### Phase 1 — finish the core slice
-- [ ] Needs-review queue: list receipts w/ status needs_review, confirm/edit/reject UI
+- [x] Needs-review queue: list receipts w/ status needs_review, confirm/edit/reject UI
 - [ ] Edit-as-void-plus-repost flow in the UI (backend already supports it)
 - [ ] Receipt photo capture from the PWA (camera input -> /api/capture/photo)
 - [ ] Monthly history view (prior months' four numbers)

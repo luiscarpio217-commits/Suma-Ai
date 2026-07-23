@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, Field
@@ -62,6 +62,35 @@ class ExtractionOut(BaseModel):
     note: str
     auto_posted: bool
     transaction_id: int | None = None
+
+
+class ReviewDraft(BaseModel):
+    """What the AI thinks the receipt says — editable, never auto-posted."""
+    merchant: str = ""
+    amount: float = 0.0
+    date: str | None = None
+    category_code: str = ""
+    is_business: bool = False
+    note: str = ""
+
+
+class ReviewItemOut(BaseModel):
+    receipt_id: int
+    source: str
+    created_at: datetime
+    confidence: float
+    has_image: bool
+    draft: ReviewDraft
+
+
+class ReviewConfirm(BaseModel):
+    """Final values the user confirmed. Receipts post as money out."""
+    amount: Decimal = Field(gt=0)
+    txn_date: date
+    category_account_id: int
+    counterparty: str = ""
+    is_business: bool = False
+    method: str = "cash"
 
 
 class DashboardOut(BaseModel):

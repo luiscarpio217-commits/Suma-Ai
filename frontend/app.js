@@ -9,6 +9,8 @@ let locale = localStorage.getItem("suma_locale") || "es";
 let strings = {};
 let categories = [];
 let txnKind = "money_out";
+let reviewingId = null;      // receipt being confirmed in the sheet, if any
+let reviewImageUrls = [];    // object URLs to revoke on re-render
 
 const $ = (sel) => document.querySelector(sel);
 const fmt = (n) =>
@@ -88,6 +90,79 @@ async function refreshTxns() {
 
 const catName = (c) => (locale === "es" ? c.name_es : c.name_en);
 
+/* ---------- needs-review queue ---------- */
+async function refreshReview() {
+  const items = await api("/api/review");
+  const list = $("#reviewList");
+  reviewImageUrls.forEach((u) => URL.revokeObjectURL(u));
+  reviewImageUrls = [];
+  list.innerHTML = "";
+  $("#reviewSection").hidden = items.length === 0;
+  $("#reviewCount").textContent = items.length;
+  for (const r of items) {
+    const li = document.createElement("li");
+    li.className = "review-item";
+    li.innerHTML = `
+      <div class="review-item-top">
+        <img class="review-thumb" alt="" hidden />
+        <div class="review-main">
+          <div class="review-who"></div>
+          <div class="review-note"></div>
+        </div>
+      </div>
+      <div class="review-actions">
+        <button class="btn btn-ghost review-discard"></button>
+        <button class="btn btn-gold review-open"></button>
+      </div>`;
+    const readable = r.draft.amount > 0 || r.draft.merchant;
+    li.querySelector(".review-who").textContent = readable
+      ? `${r.draft.merchant || "?"} · ${r.draft.amount > 0 ? fmt(r.draft.amount) : "?"}`
+      : strings.review_unreadable;
+    li.querySelector(".review-note").textContent = r.draft.note || "";
+    const open = li.querySelector(".review-open");
+    open.textContent = strings.review_open;
+    open.onclick = () => openReviewSheet(r);
+    const discard = li.querySelector(".review-discard");
+    discard.textContent = strings.review_discard;
+    discard.onclick = async () => {
+      if (!confirm(strings.review_discard_confirm)) return;
+      try {
+        await api(`/api/review/${r.receipt_id}/reject`, { method: "POST" });
+        await refreshReview();
+      } catch {
+        alert(strings.error);
+      }
+    };
+    if (r.has_image) loadReviewThumb(r.receipt_id, li.querySelector(".review-thumb"));
+    list.appendChild(li);
+  }
+}
+
+async function loadReviewThumb(id, img) {
+  // <img src> can't send the API key header, so fetch the photo ourselves.
+  try {
+    const res = await fetch(`/api/review/${id}/image`, { headers: { "X-API-Key": API_KEY } });
+    if (!res.ok) return;
+    const url = URL.createObjectURL(await res.blob());
+    reviewImageUrls.push(url);
+    img.src = url;
+    img.hidden = false;
+  } catch { /* no thumbnail, the text still works */ }
+}
+
+function openReviewSheet(r) {
+  openSheet("money_out");                 // resets the form, expense categories
+  reviewingId = r.receipt_id;             // after openSheet, which clears it
+  $("#sheetTitle").textContent = strings.review_title;
+  const f = $("#txnForm");
+  if (r.draft.amount > 0) f.amount.value = r.draft.amount;
+  if (r.draft.merchant) f.counterparty.value = r.draft.merchant;
+  if (r.draft.date) f.txn_date.value = r.draft.date;
+  f.is_business.checked = !!r.draft.is_business;
+  const match = categories.find((c) => c.code === r.draft.category_code);
+  if (match) f.category_account_id.value = match.id;
+}
+
 async function loadCategories() {
   categories = await api("/api/categories");
 }
@@ -107,6 +182,7 @@ function fillCategorySelect(kind) {
 /* ---------- add-transaction sheet ---------- */
 function openSheet(kind) {
   txnKind = kind;
+  reviewingId = null;  // manual entry unless openReviewSheet says otherwise
   $("#sheetTitle").textContent =
     kind === "money_in" ? strings.add_money_in : strings.add_money_out;
   fillCategorySelect(kind);
@@ -123,20 +199,29 @@ $("#btnCancel").onclick = () => $("#txnSheet").close();
 $("#txnForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const f = e.target;
+  const values = {
+    txn_date: f.txn_date.value,
+    amount: f.amount.value,
+    category_account_id: Number(f.category_account_id.value),
+    counterparty: f.counterparty.value,
+    is_business: f.is_business.checked,
+  };
   try {
-    await api("/api/transactions", {
-      method: "POST",
-      body: JSON.stringify({
-        kind: txnKind,
-        txn_date: f.txn_date.value,
-        amount: f.amount.value,
-        category_account_id: Number(f.category_account_id.value),
-        counterparty: f.counterparty.value,
-        is_business: f.is_business.checked,
-      }),
-    });
+    if (reviewingId != null) {
+      // Confirming a captured receipt: post it and clear it from the queue.
+      await api(`/api/review/${reviewingId}/confirm`, {
+        method: "POST",
+        body: JSON.stringify(values),
+      });
+    } else {
+      await api("/api/transactions", {
+        method: "POST",
+        body: JSON.stringify({ kind: txnKind, ...values }),
+      });
+    }
     $("#txnSheet").close();
-    await Promise.all([refreshDashboard(), refreshTxns()]);
+    reviewingId = null;
+    await Promise.all([refreshDashboard(), refreshTxns(), refreshReview()]);
   } catch {
     alert(strings.error);
   }
@@ -179,7 +264,7 @@ $("#langToggle").onclick = async () => {
   locale = locale === "es" ? "en" : "es";
   localStorage.setItem("suma_locale", locale);
   await loadLocale();
-  await refreshTxns();
+  await Promise.all([refreshTxns(), refreshReview()]);
 };
 
 /* ---------- boot ---------- */
@@ -187,7 +272,7 @@ $("#langToggle").onclick = async () => {
   await loadLocale();
   try {
     await loadCategories();
-    await Promise.all([refreshDashboard(), refreshTxns()]);
+    await Promise.all([refreshDashboard(), refreshTxns(), refreshReview()]);
   } catch (err) {
     console.error("API unreachable — is the backend running?", err);
   }

@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from .database import Base, SessionLocal, engine
-from .routers import capture, dashboard, export, transactions
+from .routers import capture, dashboard, export, review, transactions
 from .seed import seed
 
 app = FastAPI(title="Suma", version="0.1.0")
@@ -21,6 +21,7 @@ app.add_middleware(
 
 app.include_router(transactions.router)
 app.include_router(capture.router)
+app.include_router(review.router)
 app.include_router(dashboard.router)
 app.include_router(export.router)
 
