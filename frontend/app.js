@@ -240,6 +240,15 @@ async function loadCategories() {
 function fillCategorySelect(kind) {
   const sel = $("#categorySelect");
   sel.innerHTML = "";
+  sel.setCustomValidity("");
+  if (kind === "money_out") {
+    // No default here: a hurried save would be filed under whatever came
+    // first, and that lands in the tax export. The select is required, so
+    // this empty choice blocks saving until a real one is picked.
+    const prompt = new Option(strings.category_pick, "", true, true);
+    prompt.disabled = true;
+    sel.appendChild(prompt);
+  }
   const want = kind === "money_in" ? "income" : "expense";
   for (const c of categories.filter(c => c.type === want)) {
     const opt = document.createElement("option");
@@ -264,6 +273,12 @@ function openSheet(kind) {
   f.txn_date.value = new Date().toISOString().slice(0, 10);
   $("#txnSheet").showModal();
 }
+
+// The browser's own "select an item" bubble would be in the phone's language,
+// not the app's; say it with our words instead.
+$("#categorySelect").addEventListener("invalid", (e) =>
+  e.target.setCustomValidity(strings.category_required));
+$("#categorySelect").addEventListener("change", (e) => e.target.setCustomValidity(""));
 
 $("#btnIn").onclick = () => openSheet("money_in");
 $("#btnOut").onclick = () => openSheet("money_out");

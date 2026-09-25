@@ -11,6 +11,8 @@
   "amount": "¿Cuánto?",
   "who": "¿De quién? / ¿Dónde?",
   "category": "¿Para qué?",
+  "category_pick": "Toque para elegir",
+  "category_required": "Elija para qué fue el dinero.",
   "business": "Del negocio",
   "personal": "Personal",
   "date": "Fecha",

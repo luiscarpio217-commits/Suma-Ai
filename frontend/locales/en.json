@@ -11,6 +11,8 @@
   "amount": "How much?",
   "who": "From whom? / Where?",
   "category": "What for?",
+  "category_pick": "Tap to choose",
+  "category_required": "Choose what the money was for.",
   "business": "Business",
   "personal": "Personal",
   "date": "Date",
