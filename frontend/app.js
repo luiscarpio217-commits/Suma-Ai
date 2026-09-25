@@ -362,6 +362,71 @@ $("#quickForm").addEventListener("submit", async (e) => {
   }
 });
 
+/* ---------- receipt photo ---------- */
+const PHOTO_MAX_EDGE = 1600;  // plenty to read a receipt
+
+/* Phone photos run 3–12 MB. Re-encoding at a readable size uploads fast on a
+   phone connection, stays under the reader's size limit, turns formats the
+   server doesn't take (iPhone HEIC, WebP) into JPEG, and drops hidden photo
+   data such as location. */
+async function shrinkPhoto(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    const scale = Math.min(1, PHOTO_MAX_EDGE / Math.max(img.naturalWidth, img.naturalHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(img.naturalWidth * scale);
+    canvas.height = Math.round(img.naturalHeight * scale);
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#fff";  // JPEG has no transparency; see-through turns white, not black
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return await new Promise((done) => canvas.toBlob((b) => done(b || file), "image/jpeg", 0.85));
+  } catch {
+    return file;  // this browser can't open it; the server says whether it can
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+$("#btnPhoto").onclick = () => $("#photoInput").click();
+
+$("#photoInput").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  e.target.value = "";  // so the same photo can be chosen again
+  if (!file) return;
+  const btn = $("#btnPhoto");
+  const status = $("#quickStatus");
+  btn.disabled = true;
+  $("#btnPhotoLabel").textContent = strings.photo_reading;
+  status.textContent = "";
+  try {
+    const photo = await shrinkPhoto(file);
+    const form = new FormData();
+    form.append("file", photo, photo === file ? file.name : "receipt.jpg");
+    const r = await api("/api/capture/photo", {
+      method: "POST", body: form, headers: { "X-API-Key": API_KEY },
+    });
+    if (r.auto_posted) {
+      status.textContent = `✓ ${strings.captured_auto} — ${r.note || ""}`;
+      await Promise.all([refreshDashboard(), refreshTxns()]);
+    } else {
+      // Unsure (or no AI key): straight to the confirm sheet. It also waits
+      // in the review list if the user closes the sheet.
+      status.textContent = strings.captured_review;
+      await refreshReview();
+      openReviewSheet({ receipt_id: r.receipt_id, draft: r });
+    }
+  } catch (err) {
+    alert(err.status === 413 || err.status === 415 ? strings.photo_unusable : strings.error);
+  } finally {
+    btn.disabled = false;
+    $("#btnPhotoLabel").textContent = strings.photo;
+  }
+});
+
 /* ---------- language toggle ---------- */
 $("#langToggle").onclick = async () => {
   locale = locale === "es" ? "en" : "es";

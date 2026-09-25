@@ -75,6 +75,10 @@ main { padding: 0 16px; max-width: 560px; margin: 0 auto; }
   flex: 1; border: 1.5px solid var(--line); border-radius: var(--radius);
   padding: 12px 14px; font-family: inherit; font-size: 1rem; background: var(--card);
 }
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
 .quick-status { margin-top: 8px; font-size: 0.85rem; min-height: 1.2em; color: var(--ink-soft); }
 
 /* ---------- needs-review queue ---------- */
@@ -144,6 +148,11 @@ main { padding: 0 16px; max-width: 560px; margin: 0 auto; }
 .btn-out { flex: 1; background: var(--card); color: var(--ink); border: 2px solid var(--ink); }
 .btn-gold { background: var(--gold); color: var(--gold-ink); }
 .btn-ghost { background: transparent; color: var(--ink-soft); }
+.btn-photo {
+  width: 100%; margin-top: 10px;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  background: var(--card); color: var(--ink); border: 2px solid var(--ink);
+}
 
 /* ---------- sheet ---------- */
 .sheet { border: none; border-radius: 18px 18px 0 0; padding: 0; width: 100%; max-width: 560px; margin: auto auto 0; }
