@@ -56,7 +56,22 @@ async function refreshDashboard() {
   left.classList.toggle("positive", d.net > 0);
   left.classList.toggle("negative", d.net < 0);
   $("#numTaxes").textContent = fmt(d.tax_set_aside);
+  fitTileNumbers();
 }
+
+/* On a narrow phone an amount like $2,350.00 is wider than its tile. Keep the
+   board's big size when it fits; otherwise shrink that one number just enough. */
+function fitTileNumbers() {
+  for (const el of document.querySelectorAll(".tile-num")) {
+    el.style.fontSize = "";
+    let size = parseFloat(getComputedStyle(el).fontSize);
+    while (el.scrollWidth > el.clientWidth && size > 14) {
+      el.style.fontSize = `${--size}px`;
+    }
+  }
+}
+window.addEventListener("resize", fitTileNumbers);
+document.fonts?.ready.then(fitTileNumbers);  // the web font can arrive after the numbers
 
 async function refreshTxns() {
   const txns = await api("/api/transactions?limit=25");
