@@ -59,7 +59,7 @@ needs_review and the sheet opens pre-filled for the user to confirm).
 - [x] Edit-as-void-plus-repost flow in the UI (backend already supports it)
 - [x] Receipt photo capture from the PWA (camera input -> /api/capture/photo)
 - [x] Monthly history view (prior months' four numbers)
-- [ ] Quarterly tax due-date card (static IRS dates + set-aside running total)
+- [x] Quarterly tax due-date card (static IRS dates + set-aside running total)
 
 ### Phase 2 — real product
 - [ ] Multi-user auth (JWT + registration); replace the static X-API-Key +

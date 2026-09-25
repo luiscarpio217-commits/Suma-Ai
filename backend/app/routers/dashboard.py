@@ -5,9 +5,10 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..models import User
-from ..schemas import DashboardOut
+from ..schemas import DashboardOut, TaxCardOut
 from ..services import history as history_svc
 from ..services import ledger
+from ..services import tax_card as tax_card_svc
 from .deps import current_user, require_key
 
 router = APIRouter(prefix="/api", dependencies=[Depends(require_key)])
@@ -25,3 +26,9 @@ def history(months: int = Query(12, ge=1, le=36), db: Session = Depends(get_db),
             user: User = Depends(current_user)):
     """The four numbers for each month before this one, newest first."""
     return history_svc.prior_months(db, user, date.today(), limit=months)
+
+
+@router.get("/tax-card", response_model=TaxCardOut)
+def tax_card(db: Session = Depends(get_db), user: User = Depends(current_user)):
+    """Next estimated-tax payment and the set-aside for the months it covers."""
+    return tax_card_svc.tax_card(db, user, date.today())

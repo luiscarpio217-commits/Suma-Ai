@@ -109,8 +109,29 @@ async function refreshTxns() {
 
 const catName = (c) => (locale === "es" ? c.name_es : c.name_en);
 
-const refreshAll = () =>
-  Promise.all([refreshDashboard(), refreshTxns(), refreshReview(), refreshHistory()]);
+const refreshAll = () => Promise.all(
+  [refreshDashboard(), refreshTxns(), refreshReview(), refreshHistory(), refreshTaxCard()]);
+
+/* ---------- next tax payment ---------- */
+// Not new Date("2027-01-15"): that's UTC midnight, still Jan 14 in US time zones.
+const localDate = (iso) => {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d);
+};
+
+async function refreshTaxCard() {
+  const t = await api("/api/tax-card");
+  const intl = locale === "es" ? "es-US" : "en-US";
+  const monthName = (iso) => localDate(iso).toLocaleDateString(intl, { month: "long" });
+  $("#taxCardDate").textContent = localDate(t.due_date)
+    .toLocaleDateString(intl, { day: "numeric", month: "long", year: "numeric" });
+  $("#taxCardMonths").textContent = fillIn(strings.tax_card_months, {
+    from: monthName(t.period_start), to: monthName(t.period_end),
+    year: localDate(t.period_end).getFullYear(),
+  });
+  $("#taxCardAmount").textContent = fmt(t.set_aside);
+  $("#taxCard").hidden = false;
+}
 
 /* ---------- earlier months ---------- */
 async function refreshHistory() {
