@@ -1,5 +1,5 @@
 // Minimal service worker: app-shell cache so the PWA opens offline.
-const CACHE = "suma-v2";
+const CACHE = "suma-v3";
 const SHELL = ["/", "/styles.css", "/app.js", "/manifest.webmanifest",
                "/locales/es.json", "/locales/en.json", "/icon.svg"];
 self.addEventListener("install", e => {

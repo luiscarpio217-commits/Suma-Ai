@@ -30,6 +30,17 @@ class TxnCreate(BaseModel):
     memo: str = ""
 
 
+class TxnCorrect(BaseModel):
+    """Corrected values for a saved entry. The direction (in/out) can't change;
+    method defaults to the original's."""
+    txn_date: date
+    amount: Decimal = Field(gt=0)
+    category_account_id: int
+    counterparty: str = ""
+    is_business: bool = False
+    method: str | None = None
+
+
 class TxnOut(BaseModel):
     id: int
     kind: TxnKind

@@ -1,12 +1,12 @@
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..models import Account, Transaction, User
-from ..schemas import CategoryOut, TxnCreate, TxnOut
-from ..services import ledger
+from ..schemas import CategoryOut, TxnCorrect, TxnCreate, TxnOut
+from ..services import corrections, ledger
 from .deps import current_user, require_key
 
 router = APIRouter(prefix="/api", dependencies=[Depends(require_key)])
@@ -44,3 +44,22 @@ def create_transaction(body: TxnCreate, db: Session = Depends(get_db),
 def void_transaction(txn_id: int, db: Session = Depends(get_db),
                      user: User = Depends(current_user)):
     return ledger.void_transaction(db, user, txn_id)
+
+
+@router.post("/transactions/{txn_id}/correct", response_model=TxnOut)
+def correct_transaction(txn_id: int, body: TxnCorrect, db: Session = Depends(get_db),
+                        user: User = Depends(current_user)):
+    """The user's "edit": reverse the original and post the fixed values."""
+    try:
+        return corrections.correct_transaction(
+            db, user, txn_id, txn_date=body.txn_date, amount=body.amount,
+            category_account_id=body.category_account_id,
+            counterparty=body.counterparty, is_business=body.is_business,
+            method=body.method,
+        )
+    except corrections.CorrectionNotFound:
+        raise HTTPException(status_code=404, detail="transaction not found")
+    except corrections.AlreadyUndone:
+        raise HTTPException(status_code=409, detail="transaction already undone")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
