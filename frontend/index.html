@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Suma — Tu dinero, claro.</title>
+  <meta name="theme-color" content="#123B2F" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">+S</span> <span class="brand-name">Suma</span></div>
+    <button id="langToggle" class="lang" aria-label="Cambiar idioma / Switch language">EN</button>
+  </header>
+
+  <main>
+    <!-- Signature: the cuenta board. Four numbers, nothing else. -->
+    <section class="cuenta" aria-label="Resumen del mes">
+      <p class="cuenta-month" id="monthLabel"></p>
+      <div class="cuenta-grid">
+        <div class="tile tile-in">
+          <span class="tile-label" data-i18n="in"></span>
+          <span class="tile-num" id="numIn">—</span>
+        </div>
+        <div class="tile tile-out">
+          <span class="tile-label" data-i18n="out"></span>
+          <span class="tile-num" id="numOut">—</span>
+        </div>
+        <div class="tile tile-left">
+          <span class="tile-label" data-i18n="left"></span>
+          <span class="tile-num" id="numLeft">—</span>
+        </div>
+        <div class="tile tile-taxes">
+          <span class="tile-label" data-i18n="set_aside"></span>
+          <span class="tile-num" id="numTaxes">—</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quick capture: type it like you'd say it -->
+    <section class="quick">
+      <label class="quick-label" for="quickText" data-i18n="quick_capture"></label>
+      <form id="quickForm" class="quick-row">
+        <input id="quickText" type="text" autocomplete="off" data-i18n-placeholder="quick_placeholder" />
+        <button type="submit" class="btn btn-gold" data-i18n="capture"></button>
+      </form>
+      <p id="quickStatus" class="quick-status" role="status"></p>
+    </section>
+
+    <!-- Needs-review queue: what the AI wasn't sure about waits here -->
+    <section class="review" id="reviewSection" hidden>
+      <h2><span data-i18n="review_title"></span><span id="reviewCount" class="review-count"></span></h2>
+      <p class="review-hint" data-i18n="review_hint"></p>
+      <ul id="reviewList" class="review-list"></ul>
+    </section>
+
+    <!-- Recent activity -->
+    <section class="recent">
+      <h2 data-i18n="recent"></h2>
+      <ul id="txnList" class="txn-list"></ul>
+      <p id="emptyState" class="empty" data-i18n="empty" hidden></p>
+    </section>
+  </main>
+
+  <!-- Bottom capture bar: the two things you ever do -->
+  <nav class="capturebar">
+    <button class="btn btn-in" id="btnIn" data-i18n="add_money_in"></button>
+    <button class="btn btn-out" id="btnOut" data-i18n="add_money_out"></button>
+  </nav>
+
+  <!-- Add transaction sheet -->
+  <dialog id="txnSheet" class="sheet">
+    <form id="txnForm" method="dialog">
+      <h3 id="sheetTitle"></h3>
+      <div id="sheetNote" class="sheet-note" hidden>
+        <strong id="sheetNoteLead"></strong>
+        <span id="sheetNoteText"></span>
+        <button type="button" id="btnSheetDiscard" class="sheet-note-action" data-i18n="review_discard" hidden></button>
+      </div>
+      <label><span data-i18n="amount"></span>
+        <input name="amount" type="number" step="0.01" min="0.01" inputmode="decimal" required />
+      </label>
+      <label><span data-i18n="who"></span>
+        <input name="counterparty" type="text" autocomplete="off" />
+      </label>
+      <label><span data-i18n="category"></span>
+        <select name="category_account_id" id="categorySelect" required></select>
+      </label>
+      <label><span data-i18n="date"></span>
+        <input name="txn_date" type="date" required />
+      </label>
+      <label class="check">
+        <input name="is_business" type="checkbox" />
+        <span data-i18n="business"></span>
+      </label>
+      <div class="sheet-actions">
+        <button type="button" class="btn btn-ghost" id="btnCancel" data-i18n="cancel"></button>
+        <button type="submit" class="btn btn-gold" id="btnSave" data-i18n="save"></button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>

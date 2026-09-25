@@ -1,0 +1,12 @@
+{
+  "name": "Suma",
+  "short_name": "Suma",
+  "description": "Tu dinero, claro. Plain-language money tracking.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F4F8F5",
+  "theme_color": "#123B2F",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
