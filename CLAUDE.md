@@ -2,7 +2,7 @@
 
 Plain-language money tracking for self-employed immigrant households in the US.
 Motto: **complex accounting under the hood, zero accounting vocabulary on the surface.**
-The user sees four numbers: Entró / Salió / Te queda / Aparta para impuestos.
+The user sees four numbers: Entró / Salió / Le queda / Guarde para impuestos.
 
 Working title "Suma" — trademark/domain check still pending; keep the name in
 config/strings so a rename is cheap.
@@ -56,7 +56,7 @@ needs_review and the sheet opens pre-filled for the user to confirm).
 
 ### Phase 1 — finish the core slice
 - [x] Needs-review queue: list receipts w/ status needs_review, confirm/edit/reject UI
-- [ ] Edit-as-void-plus-repost flow in the UI (backend already supports it)
+- [x] Edit-as-void-plus-repost flow in the UI (backend already supports it)
 - [ ] Receipt photo capture from the PWA (camera input -> /api/capture/photo)
 - [ ] Monthly history view (prior months' four numbers)
 - [ ] Quarterly tax due-date card (static IRS dates + set-aside running total)
@@ -87,6 +87,7 @@ watch memory once Postgres enters; plan the $12 tier.
 
 - Audience is often not tech-savvy; every flow must survive "my parents use it."
   Three taps max to log money. Voice and photo beat typing.
+- Spanish copy addresses the user as usted, never tú.
 - Launch window: US tax season (Jan-Apr) is peak buying intent.
 - The Accountant Export is the anti-shoebox feature and the referral hook —
   keep it first-class.

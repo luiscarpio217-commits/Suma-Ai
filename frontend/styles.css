@@ -109,7 +109,7 @@ main { padding: 0 16px; max-width: 560px; margin: 0 auto; }
 /* ---------- recent list ---------- */
 .recent { margin-top: 26px; }
 .recent h2 { font-size: 0.85rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 8px; }
-.txn-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.txn-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .txn {
   background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
   padding: 10px 14px; display: flex; align-items: center; gap: 12px;
@@ -120,10 +120,13 @@ main { padding: 0 16px; max-width: 560px; margin: 0 auto; }
 .txn-meta { font-size: 0.78rem; color: var(--ink-soft); }
 .txn-amt { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .txn-amt.in { color: #1F6B3A; }
-.txn-void {
-  border: none; background: none; color: var(--ink-soft); font-size: 0.75rem;
-  cursor: pointer; font-family: inherit; padding: 4px;
+.txn-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.txn-void, .txn-edit {
+  border: none; background: none; color: var(--ink-soft); font-size: 0.8rem;
+  cursor: pointer; font-family: inherit; padding: 6px 4px;
 }
+.txn-edit { color: var(--ink); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.txn-void:disabled, .txn-edit:disabled, .btn:disabled { opacity: 0.5; cursor: default; }
 .empty { color: var(--ink-soft); font-size: 0.9rem; padding: 14px 4px; }
 
 /* ---------- capture bar ---------- */
@@ -152,6 +155,8 @@ main { padding: 0 16px; max-width: 560px; margin: 0 auto; }
   border: 1.5px solid var(--line); border-radius: 10px; padding: 11px 12px;
   font-family: inherit; font-size: 1rem; color: var(--ink); background: var(--card);
 }
+.sheet select:invalid { color: var(--ink-soft); }  /* the "tap to choose" prompt */
+.sheet select option { color: var(--ink); }
 .sheet .check { flex-direction: row; align-items: center; gap: 8px; font-size: 1rem; color: var(--ink); }
 .sheet .check input { width: 20px; height: 20px; accent-color: var(--ink); }
 .sheet-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }

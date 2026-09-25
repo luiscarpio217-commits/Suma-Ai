@@ -1,8 +1,8 @@
-# Suma — Tu dinero, claro.
+# Suma — Su dinero, claro.
 
 Plain-language money tracking for self-employed households. Rigorous
 double-entry accounting under the hood; four numbers on the surface:
-**Entró · Salió · Te queda · Aparta para impuestos.**
+**Entró · Salió · Le queda · Guarde para impuestos.**
 
 Bilingual (EN/ES) from day one. AI receipt & voice capture with a confidence
 gate — it never silently guesses on your money. One-click Schedule C export

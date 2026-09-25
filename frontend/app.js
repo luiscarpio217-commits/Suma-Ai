@@ -9,7 +9,7 @@ let locale = localStorage.getItem("suma_locale") || "es";
 let strings = {};
 let categories = [];
 let txnKind = "money_out";
-let reviewingId = null;      // receipt being confirmed in the sheet, if any
+let sheetTarget = null;      // null: new entry · {review: receiptId} · {edit: txnId}
 let reviewImageUrls = [];    // object URLs to revoke on re-render
 
 const $ = (sel) => document.querySelector(sel);
@@ -38,7 +38,11 @@ async function loadLocale() {
 /* ---------- data ---------- */
 async function api(path, opts = {}) {
   const res = await fetch(path, { headers: HEADERS, ...opts });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) {
+    const err = new Error(await res.text());
+    err.status = res.status;
+    throw err;
+  }
   return res.json();
 }
 
@@ -75,14 +79,29 @@ async function refreshTxns() {
       `${t.txn_date} · ${cat ? catName(cat) : ""}` +
       (t.is_business ? ` · ${strings.business}` : "");
     if (t.status === "posted") {
-      const btn = document.createElement("button");
-      btn.className = "txn-void";
-      btn.textContent = strings.void;
-      btn.onclick = async () => {
-        await api(`/api/transactions/${t.id}/void`, { method: "POST" });
-        await Promise.all([refreshDashboard(), refreshTxns()]);
+      const actions = document.createElement("div");
+      actions.className = "txn-actions";
+      const edit = document.createElement("button");
+      edit.className = "txn-edit";
+      edit.textContent = strings.edit;
+      edit.onclick = () => openEditSheet(t);
+      const undo = document.createElement("button");
+      undo.className = "txn-void";
+      undo.textContent = strings.void;
+      undo.onclick = async () => {
+        undo.disabled = edit.disabled = true;  // a double tap must not undo twice
+        try {
+          await api(`/api/transactions/${t.id}/void`, { method: "POST" }).catch((err) => {
+            if (err.status !== 409) throw err;  // 409: already undone elsewhere — the goal
+          });
+          await Promise.all([refreshDashboard(), refreshTxns()]);
+        } catch {
+          undo.disabled = edit.disabled = false;
+          alert(strings.error);
+        }
       };
-      li.appendChild(btn);
+      actions.append(edit, undo);
+      li.appendChild(actions);
     }
     list.appendChild(li);
   }
@@ -160,7 +179,7 @@ async function loadReviewThumb(id, img) {
 
 function openReviewSheet(r) {
   openSheet("money_out");                 // resets the form, expense categories
-  reviewingId = r.receipt_id;             // after openSheet, which clears it
+  sheetTarget = { review: r.receipt_id }; // after openSheet, which clears it
   showMoneyOutNote("review_out_hint", true);
   const f = $("#txnForm");
   if (r.draft.amount > 0) f.amount.value = r.draft.amount;
@@ -171,23 +190,46 @@ function openReviewSheet(r) {
   if (match) f.category_account_id.value = match.id;
 }
 
+/* Fixing a saved entry: the sheet opens with its values. The direction
+   (money in / out) stays as it was; saving sends the fix, and the
+   original stays visible in the list, crossed out. */
+function openEditSheet(t) {
+  openSheet(t.kind);
+  sheetTarget = { edit: t.id };
+  $("#sheetTitle").textContent = fillIn(strings.edit_title,
+    { kind: t.kind === "money_in" ? strings.add_money_in : strings.add_money_out });
+  showSheetNote(strings.edit_lead, strings.edit_hint, false);
+  $("#btnSave").textContent = strings.edit_save;
+  const f = $("#txnForm");
+  f.amount.value = t.amount;
+  f.counterparty.value = t.counterparty;
+  f.txn_date.value = t.txn_date;
+  f.category_account_id.value = t.category_account_id;
+  f.is_business.checked = t.is_business;
+}
+
+function showSheetNote(lead, text, canDiscard) {
+  $("#sheetNoteLead").textContent = lead;
+  $("#sheetNoteText").textContent = text;
+  $("#btnSheetDiscard").hidden = !canDiscard;
+  $("#sheetNote").hidden = false;
+}
+
 /* Confirming an AI draft can only record money going out, so say so in
    the sheet itself — a photographed check must not slip in as spending. */
 function showMoneyOutNote(hintKey, canDiscard) {
-  $("#sheetNoteLead").textContent = strings.review_out_lead;
-  $("#sheetNoteText").textContent = fillIn(strings[hintKey],
-    { money_in: strings.add_money_in, cancel: strings.cancel });
-  $("#btnSheetDiscard").hidden = !canDiscard;
-  $("#sheetNote").hidden = false;
+  showSheetNote(strings.review_out_lead,
+    fillIn(strings[hintKey], { money_in: strings.add_money_in, cancel: strings.cancel }),
+    canDiscard);
   $("#btnSave").textContent = strings.review_confirm_out;
 }
 
 const fillIn = (s, vars) => s.replace(/\{(\w+)\}/g, (m, k) => vars[k] ?? m);
 
 $("#btnSheetDiscard").onclick = async () => {
-  if (reviewingId != null && await discardReceipt(reviewingId)) {
+  if (sheetTarget?.review != null && await discardReceipt(sheetTarget.review)) {
     $("#txnSheet").close();
-    reviewingId = null;
+    sheetTarget = null;
   }
 };
 
@@ -198,6 +240,15 @@ async function loadCategories() {
 function fillCategorySelect(kind) {
   const sel = $("#categorySelect");
   sel.innerHTML = "";
+  sel.setCustomValidity("");
+  if (kind === "money_out") {
+    // No default here: a hurried save would be filed under whatever came
+    // first, and that lands in the tax export. The select is required, so
+    // this empty choice blocks saving until a real one is picked.
+    const prompt = new Option(strings.category_pick, "", true, true);
+    prompt.disabled = true;
+    sel.appendChild(prompt);
+  }
   const want = kind === "money_in" ? "income" : "expense";
   for (const c of categories.filter(c => c.type === want)) {
     const opt = document.createElement("option");
@@ -210,7 +261,7 @@ function fillCategorySelect(kind) {
 /* ---------- add-transaction sheet ---------- */
 function openSheet(kind) {
   txnKind = kind;
-  reviewingId = null;  // manual entry unless openReviewSheet says otherwise
+  sheetTarget = null;  // a new entry unless the caller says otherwise
   $("#sheetTitle").textContent =
     kind === "money_in" ? strings.add_money_in : strings.add_money_out;
   $("#sheetNote").hidden = true;
@@ -222,6 +273,12 @@ function openSheet(kind) {
   f.txn_date.value = new Date().toISOString().slice(0, 10);
   $("#txnSheet").showModal();
 }
+
+// The browser's own "select an item" bubble would be in the phone's language,
+// not the app's; say it with our words instead.
+$("#categorySelect").addEventListener("invalid", (e) =>
+  e.target.setCustomValidity(strings.category_required));
+$("#categorySelect").addEventListener("change", (e) => e.target.setCustomValidity(""));
 
 $("#btnIn").onclick = () => openSheet("money_in");
 $("#btnOut").onclick = () => openSheet("money_out");
@@ -237,10 +294,17 @@ $("#txnForm").addEventListener("submit", async (e) => {
     counterparty: f.counterparty.value,
     is_business: f.is_business.checked,
   };
+  const save = $("#btnSave");
+  save.disabled = true;  // a double tap must not save twice
   try {
-    if (reviewingId != null) {
+    if (sheetTarget?.review != null) {
       // Confirming a captured receipt: post it and clear it from the queue.
-      await api(`/api/review/${reviewingId}/confirm`, {
+      await api(`/api/review/${sheetTarget.review}/confirm`, {
+        method: "POST",
+        body: JSON.stringify(values),
+      });
+    } else if (sheetTarget?.edit != null) {
+      await api(`/api/transactions/${sheetTarget.edit}/correct`, {
         method: "POST",
         body: JSON.stringify(values),
       });
@@ -251,10 +315,17 @@ $("#txnForm").addEventListener("submit", async (e) => {
       });
     }
     $("#txnSheet").close();
-    reviewingId = null;
+    sheetTarget = null;
     await Promise.all([refreshDashboard(), refreshTxns(), refreshReview()]);
-  } catch {
+  } catch (err) {
     alert(strings.error);
+    if (err.status === 409) {  // handled elsewhere meanwhile; retrying can't work
+      $("#txnSheet").close();
+      sheetTarget = null;
+      await Promise.all([refreshDashboard(), refreshTxns(), refreshReview()]).catch(() => {});
+    }
+  } finally {
+    save.disabled = false;
   }
 });
 
