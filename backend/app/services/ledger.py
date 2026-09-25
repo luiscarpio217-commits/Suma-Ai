@@ -28,6 +28,10 @@ class UnbalancedEntry(Exception):
     pass
 
 
+class AlreadyVoided(Exception):
+    """An entry can be undone only once; a second undo would reverse it twice."""
+
+
 def _cash_account(db: Session, user_id: int) -> Account:
     return db.query(Account).filter_by(user_id=user_id, code="1000").one()
 
@@ -54,7 +58,10 @@ def record_transaction(db: Session, user: User, *, kind: TxnKind, txn_date: date
                        amount: Decimal, category_account_id: int,
                        counterparty: str = "", is_business: bool = False,
                        method: str = "cash", source: EntrySource = EntrySource.manual,
-                       receipt: Receipt | None = None, memo: str = "") -> Transaction:
+                       receipt: Receipt | None = None, memo: str = "",
+                       commit: bool = True) -> Transaction:
+    """commit=False flushes instead, leaving the commit (or rollback) to the
+    caller — so several ledger steps can land together or not at all."""
     if amount <= 0:
         raise ValueError("amount must be positive")
     amount = Decimal(amount).quantize(TWO)
@@ -80,19 +87,33 @@ def record_transaction(db: Session, user: User, *, kind: TxnKind, txn_date: date
         receipt_id=receipt.id if receipt else None,
     )
     db.add(txn)
-    db.commit()
-    db.refresh(txn)
+    if commit:
+        db.commit()
+        db.refresh(txn)
+    else:
+        db.flush()
     return txn
 
 
-def void_transaction(db: Session, user: User, txn_id: int) -> Transaction:
+def void_transaction(db: Session, user: User, txn_id: int, *,
+                     commit: bool = True) -> Transaction:
     """Fixing a mistake: post the mirror-image entry, mark the txn voided.
-    Nothing is ever deleted — the audit trail stays intact."""
+    Nothing is ever deleted — the audit trail stays intact.
+    A second undo of the same entry raises AlreadyVoided.
+    commit=False: same as in record_transaction."""
     txn = db.get(Transaction, txn_id)
     if txn is None or txn.user_id != user.id:
         raise ValueError("transaction not found")
-    if txn.status == TxnStatus.voided:
-        return txn
+    # Claim the undo in the database, not from this session's copy of the row:
+    # that copy can be stale (a double tap), and only one of two racing undos
+    # may move the entry from posted to voided.
+    claimed = (db.query(Transaction)
+                 .filter(Transaction.id == txn.id,
+                         Transaction.status == TxnStatus.posted)
+                 .update({Transaction.status: TxnStatus.voided},
+                         synchronize_session=False))
+    if claimed != 1:
+        raise AlreadyVoided(f"transaction {txn_id} was already undone")
     original = db.get(JournalEntry, txn.entry_id)
     mirror = [(l.account_id, Decimal(l.credit), Decimal(l.debit)) for l in original.lines]
     reversal = _post_entry(db, user.id, date.today(),
@@ -100,8 +121,11 @@ def void_transaction(db: Session, user: User, txn_id: int) -> Transaction:
                            EntrySource.reversal, mirror, reverses_id=original.id)
     txn.status = TxnStatus.voided
     txn.voided_by_entry_id = reversal.id
-    db.commit()
-    db.refresh(txn)
+    if commit:
+        db.commit()
+        db.refresh(txn)
+    else:
+        db.flush()
     return txn
 
 

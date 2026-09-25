@@ -38,7 +38,11 @@ async function loadLocale() {
 /* ---------- data ---------- */
 async function api(path, opts = {}) {
   const res = await fetch(path, { headers: HEADERS, ...opts });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) {
+    const err = new Error(await res.text());
+    err.status = res.status;
+    throw err;
+  }
   return res.json();
 }
 
@@ -87,7 +91,9 @@ async function refreshTxns() {
       undo.onclick = async () => {
         undo.disabled = edit.disabled = true;  // a double tap must not undo twice
         try {
-          await api(`/api/transactions/${t.id}/void`, { method: "POST" });
+          await api(`/api/transactions/${t.id}/void`, { method: "POST" }).catch((err) => {
+            if (err.status !== 409) throw err;  // 409: already undone elsewhere — the goal
+          });
           await Promise.all([refreshDashboard(), refreshTxns()]);
         } catch {
           undo.disabled = edit.disabled = false;
@@ -296,8 +302,13 @@ $("#txnForm").addEventListener("submit", async (e) => {
     $("#txnSheet").close();
     sheetTarget = null;
     await Promise.all([refreshDashboard(), refreshTxns(), refreshReview()]);
-  } catch {
+  } catch (err) {
     alert(strings.error);
+    if (err.status === 409) {  // handled elsewhere meanwhile; retrying can't work
+      $("#txnSheet").close();
+      sheetTarget = null;
+      await Promise.all([refreshDashboard(), refreshTxns(), refreshReview()]).catch(() => {});
+    }
   } finally {
     save.disabled = false;
   }

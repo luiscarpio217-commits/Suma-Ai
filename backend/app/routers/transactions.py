@@ -43,7 +43,10 @@ def create_transaction(body: TxnCreate, db: Session = Depends(get_db),
 @router.post("/transactions/{txn_id}/void", response_model=TxnOut)
 def void_transaction(txn_id: int, db: Session = Depends(get_db),
                      user: User = Depends(current_user)):
-    return ledger.void_transaction(db, user, txn_id)
+    try:
+        return ledger.void_transaction(db, user, txn_id)
+    except ledger.AlreadyVoided:
+        raise HTTPException(status_code=409, detail="transaction already undone")
 
 
 @router.post("/transactions/{txn_id}/correct", response_model=TxnOut)
@@ -59,7 +62,7 @@ def correct_transaction(txn_id: int, body: TxnCorrect, db: Session = Depends(get
         )
     except corrections.CorrectionNotFound:
         raise HTTPException(status_code=404, detail="transaction not found")
-    except corrections.AlreadyUndone:
+    except ledger.AlreadyVoided:
         raise HTTPException(status_code=409, detail="transaction already undone")
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))

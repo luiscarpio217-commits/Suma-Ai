@@ -112,10 +112,37 @@ def test_bad_input_leaves_original_untouched(db, user, bad):
     assert db.query(Transaction).count() == 1
 
 
+def test_failure_between_the_two_halves_leaves_original_untouched(db, user, monkeypatch):
+    """The undo half runs, then posting the fix fails (say, the disk fills up).
+    Both halves share one database transaction, so the undo is rolled back too."""
+    original = spend(db, user, counterparty="Shell")
+    original_lines = lines_of(db, original.entry_id)
+    entries_when_it_failed = []
+
+    def fails_after_the_undo(*args, **kwargs):
+        entries_when_it_failed.append(db.query(JournalEntry).count())
+        raise RuntimeError("database went away")
+
+    monkeypatch.setattr(ledger, "record_transaction", fails_after_the_undo)
+    with pytest.raises(RuntimeError):
+        fix(db, user, original, amount=Decimal("45.00"))
+    assert entries_when_it_failed == [2]  # the reversal existed when it failed
+
+    db.refresh(original)
+    assert original.status == TxnStatus.posted
+    assert original.voided_by_entry_id is None
+    assert db.query(JournalEntry).count() == 1
+    assert lines_of(db, original.entry_id) == original_lines
+    assert ledger_balances(db)
+
+    monkeypatch.undo()  # and it can still be corrected afterwards
+    assert fix(db, user, original, amount=Decimal("45.00")).status == TxnStatus.posted
+
+
 def test_undone_entry_cannot_be_corrected(db, user):
     original = spend(db, user)
     ledger.void_transaction(db, user, original.id)
-    with pytest.raises(corrections.AlreadyUndone):
+    with pytest.raises(ledger.AlreadyVoided):
         fix(db, user, original, amount=Decimal("41.00"))
 
 
@@ -154,3 +181,10 @@ def test_correct_endpoint(client, db, user):
     assert client.post(f"/api/transactions/{new_id}/correct", json=body,
                        headers={"X-API-Key": "wrong"}).status_code == 401
     assert ledger_balances(db)
+
+
+def test_second_undo_over_http_is_refused(client, db, user):
+    txn = spend(db, user)
+    assert client.post(f"/api/transactions/{txn.id}/void").status_code == 200
+    assert client.post(f"/api/transactions/{txn.id}/void").status_code == 409
+    assert db.query(JournalLine).count() == 4
