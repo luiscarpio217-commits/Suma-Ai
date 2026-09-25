@@ -49,9 +49,11 @@ async function api(path, opts = {}) {
 async function refreshDashboard() {
   const d = await api("/api/dashboard");
   $("#numIn").textContent = fmt(d.money_in);
+  $("#numIn").classList.toggle("positive", d.money_in > 0);
   $("#numOut").textContent = fmt(d.money_out);
   const left = $("#numLeft");
   left.textContent = fmt(d.net);
+  left.classList.toggle("positive", d.net > 0);
   left.classList.toggle("negative", d.net < 0);
   $("#numTaxes").textContent = fmt(d.tax_set_aside);
 }
@@ -82,11 +84,11 @@ async function refreshTxns() {
       const actions = document.createElement("div");
       actions.className = "txn-actions";
       const edit = document.createElement("button");
-      edit.className = "txn-edit";
+      edit.className = "btn btn-secondary txn-edit";
       edit.textContent = strings.edit;
       edit.onclick = () => openEditSheet(t);
       const undo = document.createElement("button");
-      undo.className = "txn-void";
+      undo.className = "btn btn-secondary txn-void";
       undo.textContent = strings.void;
       undo.onclick = async () => {
         undo.disabled = edit.disabled = true;  // a double tap must not undo twice
@@ -154,6 +156,7 @@ async function refreshHistory() {
       cell.querySelector("dt").textContent = strings[key];
       const dd = cell.querySelector("dd");
       dd.textContent = fmt(value);
+      dd.classList.toggle("positive", (key === "in" || key === "left") && value > 0);
       dd.classList.toggle("negative", key === "left" && value < 0);
       li.querySelector("dl").appendChild(cell);
     }
@@ -183,8 +186,8 @@ async function refreshReview() {
         <span class="review-amt"></span>
       </div>
       <div class="review-actions">
-        <button class="btn btn-ghost review-discard"></button>
-        <button class="btn btn-gold review-open"></button>
+        <button class="btn btn-secondary review-discard"></button>
+        <button class="btn btn-main review-open"></button>
       </div>`;
     const cat = categories.find((c) => c.code === r.draft.category_code);
     const readable = r.draft.amount > 0 || r.draft.merchant;
@@ -382,24 +385,29 @@ $("#txnForm").addEventListener("submit", async (e) => {
 });
 
 /* ---------- quick text capture ---------- */
+// The line under the capture buttons; red only for an error (bad news only).
+function setStatus(text, isError = false) {
+  $("#quickStatus").textContent = text;
+  $("#quickStatus").classList.toggle("is-error", isError);
+}
+
 $("#quickForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const input = $("#quickText");
-  const status = $("#quickStatus");
   if (!input.value.trim()) return;
-  status.textContent = "…";
+  setStatus("…");
   try {
     const r = await api("/api/capture/text", {
       method: "POST",
       body: JSON.stringify({ text: input.value, locale }),
     });
     if (r.auto_posted) {
-      status.textContent = `✓ ${strings.captured_auto} — ${r.note || ""}`;
+      setStatus(`✓ ${strings.captured_auto} — ${r.note || ""}`);
       input.value = "";
       await refreshAll();
     } else {
       // Low confidence (or no API key): open the sheet pre-filled for review.
-      status.textContent = strings.captured_review;
+      setStatus(strings.captured_review);
       openSheet("money_out");
       showMoneyOutNote("quick_out_hint", false);
       const f = $("#txnForm");
@@ -410,7 +418,7 @@ $("#quickForm").addEventListener("submit", async (e) => {
       if (match) f.category_account_id.value = match.id;
     }
   } catch {
-    status.textContent = strings.error;
+    setStatus(strings.error, true);
   }
 });
 
@@ -450,10 +458,9 @@ $("#photoInput").addEventListener("change", async (e) => {
   e.target.value = "";  // so the same photo can be chosen again
   if (!file) return;
   const btn = $("#btnPhoto");
-  const status = $("#quickStatus");
   btn.disabled = true;
   $("#btnPhotoLabel").textContent = strings.photo_reading;
-  status.textContent = "";
+  setStatus("");
   try {
     const photo = await shrinkPhoto(file);
     const form = new FormData();
@@ -462,12 +469,12 @@ $("#photoInput").addEventListener("change", async (e) => {
       method: "POST", body: form, headers: { "X-API-Key": API_KEY },
     });
     if (r.auto_posted) {
-      status.textContent = `✓ ${strings.captured_auto} — ${r.note || ""}`;
+      setStatus(`✓ ${strings.captured_auto} — ${r.note || ""}`);
       await refreshAll();
     } else {
       // Unsure (or no AI key): straight to the confirm sheet. It also waits
       // in the review list if the user closes the sheet.
-      status.textContent = strings.captured_review;
+      setStatus(strings.captured_review);
       await refreshReview();
       openReviewSheet({ receipt_id: r.receipt_id, draft: r });
     }
