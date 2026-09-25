@@ -1,7 +1,7 @@
 {
   "name": "Suma",
   "short_name": "Suma",
-  "description": "Tu dinero, claro. Plain-language money tracking.",
+  "description": "Su dinero, claro. Plain-language money tracking.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#F4F8F5",

@@ -1,10 +1,10 @@
 {
   "app_name": "Suma",
-  "tagline": "Tu dinero, claro.",
+  "tagline": "Su dinero, claro.",
   "in": "Entró",
   "out": "Salió",
-  "left": "Te queda",
-  "set_aside": "Aparta para impuestos",
+  "left": "Le queda",
+  "set_aside": "Guarde para impuestos",
   "this_month": "Este mes",
   "add_money_in": "Entró dinero",
   "add_money_out": "Salió dinero",
@@ -17,12 +17,12 @@
   "save": "Guardar",
   "cancel": "Cancelar",
   "recent": "Movimientos recientes",
-  "empty": "Todavía no hay movimientos. Agrega el primero con los botones de abajo.",
-  "quick_capture": "Escríbelo como lo dirías",
+  "empty": "Todavía no hay movimientos. Agregue el primero con los botones de abajo.",
+  "quick_capture": "Escríbalo como lo diría",
   "quick_placeholder": "ej. gasté 40 en gasolina para la camioneta",
   "capture": "Anotar",
   "captured_auto": "Anotado automáticamente",
-  "captured_review": "Revísalo y confírmalo",
+  "captured_review": "Revíselo y confírmelo",
   "review_title": "Revise y confirme",
   "review_hint": "Los leímos por usted. Abra uno, corrija lo que esté mal y guárdelo.",
   "review_unreadable": "No pudimos leer este. Ábralo y anótelo usted.",
@@ -41,5 +41,5 @@
   "void": "Deshacer",
   "voided": "Deshecho",
   "saved": "Guardado",
-  "error": "Algo salió mal. Inténtalo otra vez."
+  "error": "Algo salió mal. Inténtelo otra vez."
 }

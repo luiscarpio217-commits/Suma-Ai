@@ -2,7 +2,7 @@
 
 Plain-language money tracking for self-employed immigrant households in the US.
 Motto: **complex accounting under the hood, zero accounting vocabulary on the surface.**
-The user sees four numbers: Entró / Salió / Te queda / Aparta para impuestos.
+The user sees four numbers: Entró / Salió / Le queda / Guarde para impuestos.
 
 Working title "Suma" — trademark/domain check still pending; keep the name in
 config/strings so a rename is cheap.
@@ -87,6 +87,7 @@ watch memory once Postgres enters; plan the $12 tier.
 
 - Audience is often not tech-savvy; every flow must survive "my parents use it."
   Three taps max to log money. Voice and photo beat typing.
+- Spanish copy addresses the user as usted, never tú.
 - Launch window: US tax season (Jan-Apr) is peak buying intent.
 - The Accountant Export is the anti-shoebox feature and the referral hook —
   keep it first-class.
