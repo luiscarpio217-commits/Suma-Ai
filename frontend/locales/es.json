@@ -19,6 +19,7 @@
   "save": "Guardar",
   "cancel": "Cancelar",
   "recent": "Movimientos recientes",
+  "history_title": "Meses anteriores",
   "empty": "Todavía no hay movimientos. Agregue el primero con los botones de abajo.",
   "quick_capture": "Escríbalo como lo diría",
   "quick_placeholder": "ej. gasté 40 en gasolina para la camioneta",

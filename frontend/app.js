@@ -94,7 +94,7 @@ async function refreshTxns() {
           await api(`/api/transactions/${t.id}/void`, { method: "POST" }).catch((err) => {
             if (err.status !== 409) throw err;  // 409: already undone elsewhere — the goal
           });
-          await Promise.all([refreshDashboard(), refreshTxns()]);
+          await refreshAll();
         } catch {
           undo.disabled = edit.disabled = false;
           alert(strings.error);
@@ -108,6 +108,37 @@ async function refreshTxns() {
 }
 
 const catName = (c) => (locale === "es" ? c.name_es : c.name_en);
+
+const refreshAll = () =>
+  Promise.all([refreshDashboard(), refreshTxns(), refreshReview(), refreshHistory()]);
+
+/* ---------- earlier months ---------- */
+async function refreshHistory() {
+  const months = await api("/api/history");
+  const list = $("#historyList");
+  list.innerHTML = "";
+  $("#historySection").hidden = months.length === 0;
+  for (const m of months) {
+    const li = document.createElement("li");
+    li.className = "history-month";
+    li.innerHTML = `<h3></h3><dl class="history-grid"></dl>`;
+    li.querySelector("h3").textContent = new Date(m.year, m.month - 1, 1)
+      .toLocaleDateString(locale === "es" ? "es-US" : "en-US", { month: "long", year: "numeric" });
+    // Same four numbers, same labels, same order as the board.
+    for (const [key, value] of [["in", m.money_in], ["out", m.money_out],
+                                ["left", m.net], ["set_aside", m.tax_set_aside]]) {
+      const cell = document.createElement("div");
+      cell.className = `history-${key}`;
+      cell.innerHTML = "<dt></dt><dd></dd>";
+      cell.querySelector("dt").textContent = strings[key];
+      const dd = cell.querySelector("dd");
+      dd.textContent = fmt(value);
+      dd.classList.toggle("negative", key === "left" && value < 0);
+      li.querySelector("dl").appendChild(cell);
+    }
+    list.appendChild(li);
+  }
+}
 
 /* ---------- needs-review queue ---------- */
 async function refreshReview() {
@@ -316,13 +347,13 @@ $("#txnForm").addEventListener("submit", async (e) => {
     }
     $("#txnSheet").close();
     sheetTarget = null;
-    await Promise.all([refreshDashboard(), refreshTxns(), refreshReview()]);
+    await refreshAll();
   } catch (err) {
     alert(strings.error);
     if (err.status === 409) {  // handled elsewhere meanwhile; retrying can't work
       $("#txnSheet").close();
       sheetTarget = null;
-      await Promise.all([refreshDashboard(), refreshTxns(), refreshReview()]).catch(() => {});
+      await refreshAll().catch(() => {});
     }
   } finally {
     save.disabled = false;
@@ -344,7 +375,7 @@ $("#quickForm").addEventListener("submit", async (e) => {
     if (r.auto_posted) {
       status.textContent = `✓ ${strings.captured_auto} — ${r.note || ""}`;
       input.value = "";
-      await Promise.all([refreshDashboard(), refreshTxns()]);
+      await refreshAll();
     } else {
       // Low confidence (or no API key): open the sheet pre-filled for review.
       status.textContent = strings.captured_review;
@@ -411,7 +442,7 @@ $("#photoInput").addEventListener("change", async (e) => {
     });
     if (r.auto_posted) {
       status.textContent = `✓ ${strings.captured_auto} — ${r.note || ""}`;
-      await Promise.all([refreshDashboard(), refreshTxns()]);
+      await refreshAll();
     } else {
       // Unsure (or no AI key): straight to the confirm sheet. It also waits
       // in the review list if the user closes the sheet.
@@ -432,7 +463,7 @@ $("#langToggle").onclick = async () => {
   locale = locale === "es" ? "en" : "es";
   localStorage.setItem("suma_locale", locale);
   await loadLocale();
-  await Promise.all([refreshTxns(), refreshReview()]);
+  await refreshAll();  // lists hold translated labels and month names
 };
 
 /* ---------- boot ---------- */
@@ -440,7 +471,7 @@ $("#langToggle").onclick = async () => {
   await loadLocale();
   try {
     await loadCategories();
-    await Promise.all([refreshDashboard(), refreshTxns(), refreshReview()]);
+    await refreshAll();
   } catch (err) {
     console.error("API unreachable — is the backend running?", err);
   }

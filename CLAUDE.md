@@ -58,7 +58,7 @@ needs_review and the sheet opens pre-filled for the user to confirm).
 - [x] Needs-review queue: list receipts w/ status needs_review, confirm/edit/reject UI
 - [x] Edit-as-void-plus-repost flow in the UI (backend already supports it)
 - [x] Receipt photo capture from the PWA (camera input -> /api/capture/photo)
-- [ ] Monthly history view (prior months' four numbers)
+- [x] Monthly history view (prior months' four numbers)
 - [ ] Quarterly tax due-date card (static IRS dates + set-aside running total)
 
 ### Phase 2 — real product
