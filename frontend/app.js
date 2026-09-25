@@ -109,32 +109,40 @@ async function refreshReview() {
           <div class="review-who"></div>
           <div class="review-note"></div>
         </div>
+        <span class="review-amt"></span>
       </div>
       <div class="review-actions">
         <button class="btn btn-ghost review-discard"></button>
         <button class="btn btn-gold review-open"></button>
       </div>`;
+    const cat = categories.find((c) => c.code === r.draft.category_code);
     const readable = r.draft.amount > 0 || r.draft.merchant;
     li.querySelector(".review-who").textContent = readable
-      ? `${r.draft.merchant || "?"} · ${r.draft.amount > 0 ? fmt(r.draft.amount) : "?"}`
+      ? r.draft.merchant || (cat ? catName(cat) : "")
       : strings.review_unreadable;
+    li.querySelector(".review-amt").textContent =
+      r.draft.amount > 0 ? `−${fmt(r.draft.amount)}` : "";
     li.querySelector(".review-note").textContent = r.draft.note || "";
     const open = li.querySelector(".review-open");
     open.textContent = strings.review_open;
     open.onclick = () => openReviewSheet(r);
     const discard = li.querySelector(".review-discard");
     discard.textContent = strings.review_discard;
-    discard.onclick = async () => {
-      if (!confirm(strings.review_discard_confirm)) return;
-      try {
-        await api(`/api/review/${r.receipt_id}/reject`, { method: "POST" });
-        await refreshReview();
-      } catch {
-        alert(strings.error);
-      }
-    };
+    discard.onclick = () => discardReceipt(r.receipt_id);
     if (r.has_image) loadReviewThumb(r.receipt_id, li.querySelector(".review-thumb"));
     list.appendChild(li);
+  }
+}
+
+async function discardReceipt(id) {
+  if (!confirm(strings.review_discard_confirm)) return false;
+  try {
+    await api(`/api/review/${id}/reject`, { method: "POST" });
+    await refreshReview();
+    return true;
+  } catch {
+    alert(strings.error);
+    return false;
   }
 }
 
@@ -153,7 +161,7 @@ async function loadReviewThumb(id, img) {
 function openReviewSheet(r) {
   openSheet("money_out");                 // resets the form, expense categories
   reviewingId = r.receipt_id;             // after openSheet, which clears it
-  $("#sheetTitle").textContent = strings.review_title;
+  showMoneyOutNote("review_out_hint", true);
   const f = $("#txnForm");
   if (r.draft.amount > 0) f.amount.value = r.draft.amount;
   if (r.draft.merchant) f.counterparty.value = r.draft.merchant;
@@ -162,6 +170,26 @@ function openReviewSheet(r) {
   const match = categories.find((c) => c.code === r.draft.category_code);
   if (match) f.category_account_id.value = match.id;
 }
+
+/* Confirming an AI draft can only record money going out, so say so in
+   the sheet itself — a photographed check must not slip in as spending. */
+function showMoneyOutNote(hintKey, canDiscard) {
+  $("#sheetNoteLead").textContent = strings.review_out_lead;
+  $("#sheetNoteText").textContent = fillIn(strings[hintKey],
+    { money_in: strings.add_money_in, cancel: strings.cancel });
+  $("#btnSheetDiscard").hidden = !canDiscard;
+  $("#sheetNote").hidden = false;
+  $("#btnSave").textContent = strings.review_confirm_out;
+}
+
+const fillIn = (s, vars) => s.replace(/\{(\w+)\}/g, (m, k) => vars[k] ?? m);
+
+$("#btnSheetDiscard").onclick = async () => {
+  if (reviewingId != null && await discardReceipt(reviewingId)) {
+    $("#txnSheet").close();
+    reviewingId = null;
+  }
+};
 
 async function loadCategories() {
   categories = await api("/api/categories");
@@ -185,6 +213,9 @@ function openSheet(kind) {
   reviewingId = null;  // manual entry unless openReviewSheet says otherwise
   $("#sheetTitle").textContent =
     kind === "money_in" ? strings.add_money_in : strings.add_money_out;
+  $("#sheetNote").hidden = true;
+  $("#btnSheetDiscard").hidden = true;
+  $("#btnSave").textContent = strings.save;
   fillCategorySelect(kind);
   const f = $("#txnForm");
   f.reset();
@@ -247,6 +278,7 @@ $("#quickForm").addEventListener("submit", async (e) => {
       // Low confidence (or no API key): open the sheet pre-filled for review.
       status.textContent = strings.captured_review;
       openSheet("money_out");
+      showMoneyOutNote("quick_out_hint", false);
       const f = $("#txnForm");
       if (r.amount > 0) f.amount.value = r.amount;
       if (r.merchant) f.counterparty.value = r.merchant;

@@ -89,7 +89,7 @@ main { padding: 0 16px; max-width: 560px; margin: 0 auto; }
   padding: 1px 9px; font-size: 0.78rem; font-weight: 800; letter-spacing: 0;
 }
 .review-hint { font-size: 0.85rem; color: var(--ink-soft); margin-bottom: 8px; }
-.review-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.review-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .review-item {
   background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
   padding: 12px 14px; display: flex; flex-direction: column; gap: 10px;
@@ -100,7 +100,8 @@ main { padding: 0 16px; max-width: 560px; margin: 0 auto; }
   border-radius: 10px; border: 1px solid var(--line);
 }
 .review-main { flex: 1; min-width: 0; }
-.review-who { font-weight: 700; }
+.review-who { font-weight: 700; overflow-wrap: anywhere; }
+.review-amt { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; align-self: flex-start; }
 .review-note { font-size: 0.78rem; color: var(--ink-soft); }
 .review-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .review-actions .btn { padding: 10px 14px; font-size: 0.9rem; }
@@ -154,6 +155,19 @@ main { padding: 0 16px; max-width: 560px; margin: 0 auto; }
 .sheet .check { flex-direction: row; align-items: center; gap: 8px; font-size: 1rem; color: var(--ink); }
 .sheet .check input { width: 20px; height: 20px; accent-color: var(--ink); }
 .sheet-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+.sheet-note {
+  background: var(--paper); border-left: 4px solid var(--ink); border-radius: 10px;
+  padding: 10px 12px; font-size: 0.9rem; line-height: 1.35;
+  display: flex; flex-direction: column; gap: 4px; align-items: flex-start;
+}
+.sheet-note[hidden] { display: none; }
+.sheet-note strong { font-weight: 800; }
+.sheet-note span { color: var(--ink-soft); }
+.sheet-note-action {
+  border: 1.5px solid var(--danger); background: var(--card); color: var(--danger);
+  border-radius: 999px; padding: 6px 14px; margin-top: 4px;
+  font-family: inherit; font-weight: 700; font-size: 0.85rem; cursor: pointer;
+}
 
 @media (prefers-reduced-motion: no-preference) {
   .tile-num { transition: opacity 160ms ease; }
