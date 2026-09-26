@@ -35,11 +35,7 @@ body {
   display: flex; justify-content: space-between; align-items: center;
   padding: 14px 18px;
 }
-.brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 1.15rem; }
-.brand-mark {
-  background: var(--text); color: var(--bg);
-  border-radius: 8px; padding: 2px 7px; font-weight: 800;
-}
+.brand-logo { display: block; height: 26px; width: auto; }  /* wordmark.svg: brand colors live in the file */
 .lang {
   border: 1px solid var(--text); background: var(--bg); color: var(--text);
   border-radius: 999px; padding: 4px 12px; font-family: inherit;

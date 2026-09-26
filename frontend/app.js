@@ -27,6 +27,9 @@ async function loadLocale() {
   document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
     el.placeholder = strings[el.dataset.i18nPlaceholder] ?? "";
   });
+  document.querySelectorAll("[data-i18n-alt]").forEach(el => {
+    el.alt = strings[el.dataset.i18nAlt] ?? "";
+  });
   $("#langToggle").textContent = locale === "es" ? "EN" : "ES";
   const now = new Date();
   $("#monthLabel").textContent =
