@@ -1,16 +1,21 @@
 /* Suma — design tokens
    Subject: money clarity for self-employed immigrant households.
-   Palette: deep ledger green (trust, ink), warm paper, marigold (market awning).
+   Palette: black on white; blue only for good results, red only for bad news,
+   a blue tint for anything about taxes. No green or yellow anywhere.
    Type: Archivo (variable) — display + UI in one family, set wide and heavy for numbers. */
 :root {
-  --ink: #123B2F;          /* deep bottle green */
-  --ink-soft: #35544A;
-  --paper: #F4F8F5;
-  --card: #FFFFFF;
-  --gold: #F0A227;         /* marigold accent — spent in ONE place: taxes + primary action */
-  --gold-ink: #4A2F04;
-  --line: #D8E4DD;
-  --danger: #A33B2E;
+  --bg: #FFFFFF;            /* page, cards, secondary buttons */
+  --text: #1A1A1A;          /* all wording and everyday numbers, expenses included */
+  --good: #185FA5;          /* good results only: money in, "Le queda" above zero */
+  --bad: #A32D2D;           /* bad news only: "Le queda" below zero, errors */
+  --tax-ink: #0C447C;       /* tax card text… */
+  --tax-tint: #E6F1FB;      /* …on this tint */
+  --main-ink: #0C447C;      /* main buttons: take photo, save, confirm */
+  --main-bg: #E6F1FB;
+  --main-border: #185FA5;
+  --line: #D9D9D9;          /* card and field borders */
+  --backdrop: rgba(26, 26, 26, 0.45);  /* behind the bottom sheet */
+  --focus: #185FA5;         /* keyboard focus ring */
   --radius: 14px;
   font-size: 16px;
 }
@@ -19,8 +24,8 @@
 
 body {
   font-family: "Archivo", system-ui, -apple-system, sans-serif;
-  background: var(--paper);
-  color: var(--ink);
+  background: var(--bg);
+  color: var(--text);
   min-height: 100dvh;
   padding-bottom: 92px; /* room for capture bar */
 }
@@ -30,68 +35,73 @@ body {
   display: flex; justify-content: space-between; align-items: center;
   padding: 14px 18px;
 }
-.brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 1.15rem; }
-.brand-mark {
-  background: var(--ink); color: var(--gold);
-  border-radius: 8px; padding: 2px 7px; font-weight: 800;
-}
+.brand-logo { display: block; height: 26px; width: auto; }  /* wordmark.svg: brand colors live in the file */
 .lang {
-  border: 1.5px solid var(--ink); background: transparent; color: var(--ink);
-  border-radius: 999px; padding: 4px 12px; font-weight: 700; font-family: inherit;
-  cursor: pointer;
+  border: 1px solid var(--text); background: var(--bg); color: var(--text);
+  border-radius: 999px; padding: 4px 12px; font-family: inherit;
+  font-size: 0.9375rem; font-weight: 500; cursor: pointer;
 }
 .lang:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible {
-  outline: 3px solid var(--gold); outline-offset: 2px;
+  outline: 3px solid var(--focus); outline-offset: 2px;
 }
 
 main { padding: 0 16px; max-width: 560px; margin: 0 auto; }
 
+/* ---------- good / bad numbers ---------- */
+.positive { color: var(--good); }
+.negative { color: var(--bad); }
+
 /* ---------- the cuenta board (signature) ---------- */
 .cuenta-month {
   font-size: 0.8rem; letter-spacing: 0.12em; text-transform: uppercase;
-  color: var(--ink-soft); margin: 4px 2px 10px;
+  margin: 4px 2px 10px;
 }
-.cuenta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cuenta-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .tile {
-  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius);
   padding: 14px 14px 12px; display: flex; flex-direction: column; gap: 2px;
   min-height: 92px; justify-content: flex-end;
 }
-.tile-label { font-size: 0.78rem; font-weight: 600; color: var(--ink-soft); }
+.tile-label { font-size: 0.78rem; font-weight: 600; }
 .tile-num {
   font-variation-settings: "wdth" 110;
   font-weight: 850; font-size: clamp(1.5rem, 7.5vw, 2.1rem);
   letter-spacing: -0.01em; font-variant-numeric: tabular-nums;
+  white-space: nowrap; overflow: hidden;  /* app.js shrinks big amounts to fit */
 }
-.tile-taxes { background: var(--gold); border-color: var(--gold); }
-.tile-taxes .tile-label, .tile-taxes .tile-num { color: var(--gold-ink); }
-.tile-left .tile-num.negative { color: var(--danger); }
+.tile-taxes { background: var(--tax-tint); border-color: var(--tax-tint); }
+.tile-taxes .tile-label, .tile-taxes .tile-num { color: var(--tax-ink); }
 
 /* ---------- quick capture ---------- */
 .quick { margin-top: 22px; }
-.quick-label { font-size: 0.85rem; font-weight: 600; color: var(--ink-soft); display: block; margin-bottom: 6px; }
+.quick-label { font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 6px; }
 .quick-row { display: flex; gap: 8px; }
 .quick-row input {
-  flex: 1; border: 1.5px solid var(--line); border-radius: var(--radius);
-  padding: 12px 14px; font-family: inherit; font-size: 1rem; background: var(--card);
+  flex: 1; border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 12px 14px; font-family: inherit; font-size: 1rem;
+  color: var(--text); background: var(--bg);
 }
-.quick-status { margin-top: 8px; font-size: 0.85rem; min-height: 1.2em; color: var(--ink-soft); }
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.quick-status { margin-top: 8px; font-size: 0.85rem; min-height: 1.2em; }
+.quick-status.is-error { color: var(--bad); }
 
 /* ---------- needs-review queue ---------- */
 .review { margin-top: 26px; }
 .review h2 {
   font-size: 0.85rem; letter-spacing: 0.1em; text-transform: uppercase;
-  color: var(--ink-soft); margin-bottom: 2px;
-  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 2px; display: flex; align-items: center; gap: 8px;
 }
 .review-count {
-  background: var(--gold); color: var(--gold-ink); border-radius: 999px;
+  background: var(--text); color: var(--bg); border-radius: 999px;
   padding: 1px 9px; font-size: 0.78rem; font-weight: 800; letter-spacing: 0;
 }
-.review-hint { font-size: 0.85rem; color: var(--ink-soft); margin-bottom: 8px; }
+.review-hint { font-size: 0.85rem; margin-bottom: 8px; }
 .review-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .review-item {
-  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius);
   padding: 12px 14px; display: flex; flex-direction: column; gap: 10px;
 }
 .review-item-top { display: flex; align-items: center; gap: 12px; }
@@ -102,77 +112,114 @@ main { padding: 0 16px; max-width: 560px; margin: 0 auto; }
 .review-main { flex: 1; min-width: 0; }
 .review-who { font-weight: 700; overflow-wrap: anywhere; }
 .review-amt { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; align-self: flex-start; }
-.review-note { font-size: 0.78rem; color: var(--ink-soft); }
+.review-note { font-size: 0.78rem; }
 .review-actions { display: flex; justify-content: flex-end; gap: 8px; }
-.review-actions .btn { padding: 10px 14px; font-size: 0.9rem; }
+.review-actions .btn { padding: 10px 14px; font-size: 0.9375rem; }
 
 /* ---------- recent list ---------- */
 .recent { margin-top: 26px; }
-.recent h2 { font-size: 0.85rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 8px; }
+.recent h2 { font-size: 0.85rem; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
 .txn-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .txn {
-  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
-  padding: 10px 14px; display: flex; align-items: center; gap: 12px;
+  background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 10px 14px; display: grid; grid-template-columns: 1fr auto;
+  align-items: center; gap: 8px 12px;
 }
 .txn.voided { opacity: 0.45; text-decoration: line-through; }
 .txn-main { flex: 1; min-width: 0; }
 .txn-who { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.txn-meta { font-size: 0.78rem; color: var(--ink-soft); }
+.txn-meta { font-size: 0.78rem; }
 .txn-amt { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.txn-amt.in { color: #1F6B3A; }
-.txn-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
-.txn-void, .txn-edit {
-  border: none; background: none; color: var(--ink-soft); font-size: 0.8rem;
-  cursor: pointer; font-family: inherit; padding: 6px 4px;
+.txn-amt.in { color: var(--good); }
+/* Own line under the entry, so the name keeps the full width. */
+.txn-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 8px; }
+.txn-actions .btn { padding: 6px 14px; font-size: 0.9375rem; }
+.empty { font-size: 0.9rem; padding: 14px 4px; }
+
+/* ---------- next tax payment ---------- */
+.taxcard {
+  margin-top: 26px; background: var(--tax-tint); color: var(--tax-ink);
+  border-radius: var(--radius); padding: 14px 16px;
 }
-.txn-edit { color: var(--ink); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
-.txn-void:disabled, .txn-edit:disabled, .btn:disabled { opacity: 0.5; cursor: default; }
-.empty { color: var(--ink-soft); font-size: 0.9rem; padding: 14px 4px; }
+.taxcard h2 { font-size: 0.85rem; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+.taxcard-date { font-size: 1.35rem; font-weight: 800; }
+.taxcard-months { font-size: 0.85rem; margin-bottom: 10px; }
+.taxcard-label { font-size: 0.78rem; font-weight: 600; }
+.taxcard-amount {
+  font-variation-settings: "wdth" 110; font-weight: 850;
+  font-size: clamp(1.5rem, 7.5vw, 2.1rem); font-variant-numeric: tabular-nums;
+}
+.taxcard-note { font-size: 0.8rem; margin-top: 4px; }
+
+/* ---------- earlier months ---------- */
+.history { margin-top: 26px; }
+.history h2 { font-size: 0.85rem; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+.history-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.history-month {
+  background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 12px 14px;
+}
+.history-month h3 { font-size: 1rem; font-weight: 800; margin-bottom: 8px; }
+.history-month h3::first-letter { text-transform: uppercase; }  /* "agosto de 2026" */
+.history-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+.history-grid dt { font-size: 0.72rem; font-weight: 600; }
+.history-grid dd {
+  margin: 0; font-weight: 800; font-size: 1.05rem;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.history-set_aside {
+  background: var(--tax-tint); color: var(--tax-ink);
+  border-radius: 8px; padding: 4px 8px; margin: -4px -8px;
+}
+@media (min-width: 480px) { .history-grid { grid-template-columns: repeat(4, 1fr); } }
+
+/* ---------- buttons ---------- */
+.btn {
+  font-family: inherit; font-size: 1rem; font-weight: 500;  /* at least 15px, medium */
+  border-radius: var(--radius); padding: 14px 18px; cursor: pointer;
+  border: 1px solid transparent;
+}
+.btn-main { background: var(--main-bg); color: var(--main-ink); border-color: var(--main-border); }
+.btn-secondary { background: var(--bg); color: var(--text); border-color: var(--text); }
+.btn:disabled { opacity: 0.5; cursor: default; }
+.btn-photo {
+  width: 100%; margin-top: 10px;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+}
 
 /* ---------- capture bar ---------- */
 .capturebar {
   position: fixed; bottom: 0; left: 0; right: 0;
   display: flex; gap: 10px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
-  background: linear-gradient(to top, var(--paper) 75%, transparent);
+  background: linear-gradient(to top, var(--bg) 75%, transparent);
   max-width: 560px; margin: 0 auto;
 }
-.btn {
-  font-family: inherit; font-weight: 800; font-size: 1rem;
-  border-radius: var(--radius); padding: 14px 18px; border: none; cursor: pointer;
-}
-.btn-in  { flex: 1; background: var(--ink); color: var(--paper); }
-.btn-out { flex: 1; background: var(--card); color: var(--ink); border: 2px solid var(--ink); }
-.btn-gold { background: var(--gold); color: var(--gold-ink); }
-.btn-ghost { background: transparent; color: var(--ink-soft); }
+.capturebar .btn { flex: 1; }
 
 /* ---------- sheet ---------- */
-.sheet { border: none; border-radius: 18px 18px 0 0; padding: 0; width: 100%; max-width: 560px; margin: auto auto 0; }
-.sheet::backdrop { background: rgba(18, 59, 47, 0.45); }
+.sheet {
+  border: none; border-radius: 18px 18px 0 0; padding: 0; width: 100%; max-width: 560px;
+  margin: auto auto 0; background: var(--bg); color: var(--text);
+}
+.sheet::backdrop { background: var(--backdrop); }
 .sheet form { padding: 20px 18px calc(18px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 12px; }
 .sheet h3 { font-size: 1.2rem; font-weight: 800; }
-.sheet label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; font-weight: 600; color: var(--ink-soft); }
+.sheet label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; font-weight: 600; }
 .sheet input, .sheet select {
-  border: 1.5px solid var(--line); border-radius: 10px; padding: 11px 12px;
-  font-family: inherit; font-size: 1rem; color: var(--ink); background: var(--card);
+  border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px;
+  font-family: inherit; font-size: 1rem; color: var(--text); background: var(--bg);
 }
-.sheet select:invalid { color: var(--ink-soft); }  /* the "tap to choose" prompt */
-.sheet select option { color: var(--ink); }
-.sheet .check { flex-direction: row; align-items: center; gap: 8px; font-size: 1rem; color: var(--ink); }
-.sheet .check input { width: 20px; height: 20px; accent-color: var(--ink); }
+.sheet .check { flex-direction: row; align-items: center; gap: 8px; font-size: 1rem; }
+.sheet .check input { width: 20px; height: 20px; accent-color: var(--text); }
 .sheet-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
 .sheet-note {
-  background: var(--paper); border-left: 4px solid var(--ink); border-radius: 10px;
+  border: 1px solid var(--line); border-left: 4px solid var(--text); border-radius: 10px;
   padding: 10px 12px; font-size: 0.9rem; line-height: 1.35;
   display: flex; flex-direction: column; gap: 4px; align-items: flex-start;
 }
 .sheet-note[hidden] { display: none; }
 .sheet-note strong { font-weight: 800; }
-.sheet-note span { color: var(--ink-soft); }
-.sheet-note-action {
-  border: 1.5px solid var(--danger); background: var(--card); color: var(--danger);
-  border-radius: 999px; padding: 6px 14px; margin-top: 4px;
-  font-family: inherit; font-weight: 700; font-size: 0.85rem; cursor: pointer;
-}
+.sheet-note .btn { padding: 8px 14px; margin-top: 4px; font-size: 0.9375rem; }
 
 @media (prefers-reduced-motion: no-preference) {
   .tile-num { transition: opacity 160ms ease; }

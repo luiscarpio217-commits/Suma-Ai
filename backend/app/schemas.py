@@ -104,6 +104,15 @@ class ReviewConfirm(BaseModel):
     method: str = "cash"
 
 
+class TaxCardOut(BaseModel):
+    """Next estimated-tax payment: due date, the months it covers, and the
+    set-aside added up for those months so far."""
+    due_date: date
+    period_start: date
+    period_end: date
+    set_aside: float
+
+
 class DashboardOut(BaseModel):
     year: int
     month: int

@@ -1,4 +1,4 @@
-# Suma — Su dinero, claro.
+# Suma — Su dinero, simplemente sumado.
 
 Plain-language money tracking for self-employed households. Rigorous
 double-entry accounting under the hood; four numbers on the surface:

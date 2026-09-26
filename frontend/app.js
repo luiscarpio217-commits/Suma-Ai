@@ -27,6 +27,9 @@ async function loadLocale() {
   document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
     el.placeholder = strings[el.dataset.i18nPlaceholder] ?? "";
   });
+  document.querySelectorAll("[data-i18n-alt]").forEach(el => {
+    el.alt = strings[el.dataset.i18nAlt] ?? "";
+  });
   $("#langToggle").textContent = locale === "es" ? "EN" : "ES";
   const now = new Date();
   $("#monthLabel").textContent =
@@ -49,12 +52,29 @@ async function api(path, opts = {}) {
 async function refreshDashboard() {
   const d = await api("/api/dashboard");
   $("#numIn").textContent = fmt(d.money_in);
+  $("#numIn").classList.toggle("positive", d.money_in > 0);
   $("#numOut").textContent = fmt(d.money_out);
   const left = $("#numLeft");
   left.textContent = fmt(d.net);
+  left.classList.toggle("positive", d.net > 0);
   left.classList.toggle("negative", d.net < 0);
   $("#numTaxes").textContent = fmt(d.tax_set_aside);
+  fitTileNumbers();
 }
+
+/* On a narrow phone an amount like $2,350.00 is wider than its tile. Keep the
+   board's big size when it fits; otherwise shrink that one number just enough. */
+function fitTileNumbers() {
+  for (const el of document.querySelectorAll(".tile-num")) {
+    el.style.fontSize = "";
+    let size = parseFloat(getComputedStyle(el).fontSize);
+    while (el.scrollWidth > el.clientWidth && size > 14) {
+      el.style.fontSize = `${--size}px`;
+    }
+  }
+}
+window.addEventListener("resize", fitTileNumbers);
+document.fonts?.ready.then(fitTileNumbers);  // the web font can arrive after the numbers
 
 async function refreshTxns() {
   const txns = await api("/api/transactions?limit=25");
@@ -82,11 +102,11 @@ async function refreshTxns() {
       const actions = document.createElement("div");
       actions.className = "txn-actions";
       const edit = document.createElement("button");
-      edit.className = "txn-edit";
+      edit.className = "btn btn-secondary txn-edit";
       edit.textContent = strings.edit;
       edit.onclick = () => openEditSheet(t);
       const undo = document.createElement("button");
-      undo.className = "txn-void";
+      undo.className = "btn btn-secondary txn-void";
       undo.textContent = strings.void;
       undo.onclick = async () => {
         undo.disabled = edit.disabled = true;  // a double tap must not undo twice
@@ -94,7 +114,7 @@ async function refreshTxns() {
           await api(`/api/transactions/${t.id}/void`, { method: "POST" }).catch((err) => {
             if (err.status !== 409) throw err;  // 409: already undone elsewhere — the goal
           });
-          await Promise.all([refreshDashboard(), refreshTxns()]);
+          await refreshAll();
         } catch {
           undo.disabled = edit.disabled = false;
           alert(strings.error);
@@ -108,6 +128,59 @@ async function refreshTxns() {
 }
 
 const catName = (c) => (locale === "es" ? c.name_es : c.name_en);
+
+const refreshAll = () => Promise.all(
+  [refreshDashboard(), refreshTxns(), refreshReview(), refreshHistory(), refreshTaxCard()]);
+
+/* ---------- next tax payment ---------- */
+// Not new Date("2027-01-15"): that's UTC midnight, still Jan 14 in US time zones.
+const localDate = (iso) => {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d);
+};
+
+async function refreshTaxCard() {
+  const t = await api("/api/tax-card");
+  const intl = locale === "es" ? "es-US" : "en-US";
+  const monthName = (iso) => localDate(iso).toLocaleDateString(intl, { month: "long" });
+  $("#taxCardDate").textContent = localDate(t.due_date)
+    .toLocaleDateString(intl, { day: "numeric", month: "long", year: "numeric" });
+  $("#taxCardMonths").textContent = fillIn(strings.tax_card_months, {
+    from: monthName(t.period_start), to: monthName(t.period_end),
+    year: localDate(t.period_end).getFullYear(),
+  });
+  $("#taxCardAmount").textContent = fmt(t.set_aside);
+  $("#taxCard").hidden = false;
+}
+
+/* ---------- earlier months ---------- */
+async function refreshHistory() {
+  const months = await api("/api/history");
+  const list = $("#historyList");
+  list.innerHTML = "";
+  $("#historySection").hidden = months.length === 0;
+  for (const m of months) {
+    const li = document.createElement("li");
+    li.className = "history-month";
+    li.innerHTML = `<h3></h3><dl class="history-grid"></dl>`;
+    li.querySelector("h3").textContent = new Date(m.year, m.month - 1, 1)
+      .toLocaleDateString(locale === "es" ? "es-US" : "en-US", { month: "long", year: "numeric" });
+    // Same four numbers, same labels, same order as the board.
+    for (const [key, value] of [["in", m.money_in], ["out", m.money_out],
+                                ["left", m.net], ["set_aside", m.tax_set_aside]]) {
+      const cell = document.createElement("div");
+      cell.className = `history-${key}`;
+      cell.innerHTML = "<dt></dt><dd></dd>";
+      cell.querySelector("dt").textContent = strings[key];
+      const dd = cell.querySelector("dd");
+      dd.textContent = fmt(value);
+      dd.classList.toggle("positive", (key === "in" || key === "left") && value > 0);
+      dd.classList.toggle("negative", key === "left" && value < 0);
+      li.querySelector("dl").appendChild(cell);
+    }
+    list.appendChild(li);
+  }
+}
 
 /* ---------- needs-review queue ---------- */
 async function refreshReview() {
@@ -131,8 +204,8 @@ async function refreshReview() {
         <span class="review-amt"></span>
       </div>
       <div class="review-actions">
-        <button class="btn btn-ghost review-discard"></button>
-        <button class="btn btn-gold review-open"></button>
+        <button class="btn btn-secondary review-discard"></button>
+        <button class="btn btn-main review-open"></button>
       </div>`;
     const cat = categories.find((c) => c.code === r.draft.category_code);
     const readable = r.draft.amount > 0 || r.draft.merchant;
@@ -316,13 +389,13 @@ $("#txnForm").addEventListener("submit", async (e) => {
     }
     $("#txnSheet").close();
     sheetTarget = null;
-    await Promise.all([refreshDashboard(), refreshTxns(), refreshReview()]);
+    await refreshAll();
   } catch (err) {
     alert(strings.error);
     if (err.status === 409) {  // handled elsewhere meanwhile; retrying can't work
       $("#txnSheet").close();
       sheetTarget = null;
-      await Promise.all([refreshDashboard(), refreshTxns(), refreshReview()]).catch(() => {});
+      await refreshAll().catch(() => {});
     }
   } finally {
     save.disabled = false;
@@ -330,24 +403,29 @@ $("#txnForm").addEventListener("submit", async (e) => {
 });
 
 /* ---------- quick text capture ---------- */
+// The line under the capture buttons; red only for an error (bad news only).
+function setStatus(text, isError = false) {
+  $("#quickStatus").textContent = text;
+  $("#quickStatus").classList.toggle("is-error", isError);
+}
+
 $("#quickForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const input = $("#quickText");
-  const status = $("#quickStatus");
   if (!input.value.trim()) return;
-  status.textContent = "…";
+  setStatus("…");
   try {
     const r = await api("/api/capture/text", {
       method: "POST",
       body: JSON.stringify({ text: input.value, locale }),
     });
     if (r.auto_posted) {
-      status.textContent = `✓ ${strings.captured_auto} — ${r.note || ""}`;
+      setStatus(`✓ ${strings.captured_auto} — ${r.note || ""}`);
       input.value = "";
-      await Promise.all([refreshDashboard(), refreshTxns()]);
+      await refreshAll();
     } else {
       // Low confidence (or no API key): open the sheet pre-filled for review.
-      status.textContent = strings.captured_review;
+      setStatus(strings.captured_review);
       openSheet("money_out");
       showMoneyOutNote("quick_out_hint", false);
       const f = $("#txnForm");
@@ -358,7 +436,71 @@ $("#quickForm").addEventListener("submit", async (e) => {
       if (match) f.category_account_id.value = match.id;
     }
   } catch {
-    status.textContent = strings.error;
+    setStatus(strings.error, true);
+  }
+});
+
+/* ---------- receipt photo ---------- */
+const PHOTO_MAX_EDGE = 1600;  // plenty to read a receipt
+
+/* Phone photos run 3–12 MB. Re-encoding at a readable size uploads fast on a
+   phone connection, stays under the reader's size limit, turns formats the
+   server doesn't take (iPhone HEIC, WebP) into JPEG, and drops hidden photo
+   data such as location. */
+async function shrinkPhoto(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    const scale = Math.min(1, PHOTO_MAX_EDGE / Math.max(img.naturalWidth, img.naturalHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(img.naturalWidth * scale);
+    canvas.height = Math.round(img.naturalHeight * scale);
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#fff";  // JPEG has no transparency; see-through turns white, not black
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return await new Promise((done) => canvas.toBlob((b) => done(b || file), "image/jpeg", 0.85));
+  } catch {
+    return file;  // this browser can't open it; the server says whether it can
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+$("#btnPhoto").onclick = () => $("#photoInput").click();
+
+$("#photoInput").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  e.target.value = "";  // so the same photo can be chosen again
+  if (!file) return;
+  const btn = $("#btnPhoto");
+  btn.disabled = true;
+  $("#btnPhotoLabel").textContent = strings.photo_reading;
+  setStatus("");
+  try {
+    const photo = await shrinkPhoto(file);
+    const form = new FormData();
+    form.append("file", photo, photo === file ? file.name : "receipt.jpg");
+    const r = await api("/api/capture/photo", {
+      method: "POST", body: form, headers: { "X-API-Key": API_KEY },
+    });
+    if (r.auto_posted) {
+      setStatus(`✓ ${strings.captured_auto} — ${r.note || ""}`);
+      await refreshAll();
+    } else {
+      // Unsure (or no AI key): straight to the confirm sheet. It also waits
+      // in the review list if the user closes the sheet.
+      setStatus(strings.captured_review);
+      await refreshReview();
+      openReviewSheet({ receipt_id: r.receipt_id, draft: r });
+    }
+  } catch (err) {
+    alert(err.status === 413 || err.status === 415 ? strings.photo_unusable : strings.error);
+  } finally {
+    btn.disabled = false;
+    $("#btnPhotoLabel").textContent = strings.photo;
   }
 });
 
@@ -367,7 +509,7 @@ $("#langToggle").onclick = async () => {
   locale = locale === "es" ? "en" : "es";
   localStorage.setItem("suma_locale", locale);
   await loadLocale();
-  await Promise.all([refreshTxns(), refreshReview()]);
+  await refreshAll();  // lists hold translated labels and month names
 };
 
 /* ---------- boot ---------- */
@@ -375,7 +517,7 @@ $("#langToggle").onclick = async () => {
   await loadLocale();
   try {
     await loadCategories();
-    await Promise.all([refreshDashboard(), refreshTxns(), refreshReview()]);
+    await refreshAll();
   } catch (err) {
     console.error("API unreachable — is the backend running?", err);
   }

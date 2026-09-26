@@ -4,7 +4,7 @@ from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from ..config import settings
@@ -15,6 +15,18 @@ from ..services import categorize, ledger
 from .deps import current_user, require_key
 
 router = APIRouter(prefix="/api/capture", dependencies=[Depends(require_key)])
+
+MAX_PHOTO_BYTES = 10 * 1024 * 1024
+
+# Phone cameras give JPEG and screenshots PNG; the PWA converts anything else
+# the phone can open (WebP, iPhone HEIC) to JPEG before uploading. The saved
+# extension comes from these bytes, never from the uploaded file's name —
+# categorize.py derives the media type it sends from that extension.
+PHOTO_SIGNATURES = ((b"\xff\xd8\xff", ".jpg"), (b"\x89PNG\r\n\x1a\n", ".png"))
+
+
+def _photo_extension(data: bytes) -> str | None:
+    return next((ext for magic, ext in PHOTO_SIGNATURES if data.startswith(magic)), None)
 
 
 def _maybe_post(db, user, receipt, extraction) -> ExtractionOut:
@@ -56,9 +68,14 @@ def _maybe_post(db, user, receipt, extraction) -> ExtractionOut:
 @router.post("/photo", response_model=ExtractionOut)
 async def capture_photo(file: UploadFile = File(...), db: Session = Depends(get_db),
                         user: User = Depends(current_user)):
-    ext = Path(file.filename or "r.jpg").suffix or ".jpg"
+    data = await file.read(MAX_PHOTO_BYTES + 1)
+    if len(data) > MAX_PHOTO_BYTES:
+        raise HTTPException(status_code=413, detail="photo too large")
+    ext = _photo_extension(data)
+    if ext is None:
+        raise HTTPException(status_code=415, detail="not a JPEG or PNG photo")
     dest = Path(settings.upload_dir) / f"{uuid.uuid4().hex}{ext}"
-    dest.write_bytes(await file.read())
+    dest.write_bytes(data)
 
     receipt = Receipt(user_id=user.id, file_path=str(dest), source="photo")
     db.add(receipt)

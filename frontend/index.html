@@ -3,10 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Suma — Su dinero, claro.</title>
-  <meta name="theme-color" content="#123B2F" />
+  <title>Suma — Su dinero, simplemente sumado.</title>
+  <meta name="theme-color" content="#FFFFFF" />
   <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet" />
@@ -14,7 +16,7 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><span class="brand-mark">+S</span> <span class="brand-name">Suma</span></div>
+    <img class="brand-logo" src="wordmark.svg" alt="" data-i18n-alt="app_name" />
     <button id="langToggle" class="lang" aria-label="Cambiar idioma / Switch language">EN</button>
   </header>
 
@@ -47,8 +49,19 @@
       <label class="quick-label" for="quickText" data-i18n="quick_capture"></label>
       <form id="quickForm" class="quick-row">
         <input id="quickText" type="text" autocomplete="off" data-i18n-placeholder="quick_placeholder" />
-        <button type="submit" class="btn btn-gold" data-i18n="capture"></button>
+        <button type="submit" class="btn btn-main" data-i18n="capture"></button>
       </form>
+      <!-- Receipt photo: the phone offers the camera or a saved photo -->
+      <button type="button" id="btnPhoto" class="btn btn-main btn-photo">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 8a2 2 0 0 1 2-2h2.2l1.4-2h6.8l1.4 2H19a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+        <span id="btnPhotoLabel" data-i18n="photo"></span>
+      </button>
+      <input id="photoInput" type="file" accept="image/*"
+             class="visually-hidden" tabindex="-1" aria-hidden="true" />
       <p id="quickStatus" class="quick-status" role="status"></p>
     </section>
 
@@ -59,18 +72,34 @@
       <ul id="reviewList" class="review-list"></ul>
     </section>
 
+    <!-- Next quarterly tax payment -->
+    <section class="taxcard" id="taxCard" hidden aria-labelledby="taxCardTitle">
+      <h2 id="taxCardTitle" data-i18n="tax_card_title"></h2>
+      <p class="taxcard-date" id="taxCardDate"></p>
+      <p class="taxcard-months" id="taxCardMonths"></p>
+      <p class="taxcard-label" data-i18n="tax_card_amount"></p>
+      <p class="taxcard-amount" id="taxCardAmount"></p>
+      <p class="taxcard-note" data-i18n="tax_card_estimate"></p>
+    </section>
+
     <!-- Recent activity -->
     <section class="recent">
       <h2 data-i18n="recent"></h2>
       <ul id="txnList" class="txn-list"></ul>
       <p id="emptyState" class="empty" data-i18n="empty" hidden></p>
     </section>
+
+    <!-- Earlier months: the same four numbers, month by month -->
+    <section class="history" id="historySection" hidden>
+      <h2 data-i18n="history_title"></h2>
+      <ul id="historyList" class="history-list"></ul>
+    </section>
   </main>
 
   <!-- Bottom capture bar: the two things you ever do -->
   <nav class="capturebar">
-    <button class="btn btn-in" id="btnIn" data-i18n="add_money_in"></button>
-    <button class="btn btn-out" id="btnOut" data-i18n="add_money_out"></button>
+    <button class="btn btn-main" id="btnIn" data-i18n="add_money_in"></button>
+    <button class="btn btn-main" id="btnOut" data-i18n="add_money_out"></button>
   </nav>
 
   <!-- Add transaction sheet -->
@@ -80,7 +109,7 @@
       <div id="sheetNote" class="sheet-note" hidden>
         <strong id="sheetNoteLead"></strong>
         <span id="sheetNoteText"></span>
-        <button type="button" id="btnSheetDiscard" class="sheet-note-action" data-i18n="review_discard" hidden></button>
+        <button type="button" id="btnSheetDiscard" class="btn btn-secondary" data-i18n="review_discard" hidden></button>
       </div>
       <label><span data-i18n="amount"></span>
         <input name="amount" type="number" step="0.01" min="0.01" inputmode="decimal" required />
@@ -99,8 +128,8 @@
         <span data-i18n="business"></span>
       </label>
       <div class="sheet-actions">
-        <button type="button" class="btn btn-ghost" id="btnCancel" data-i18n="cancel"></button>
-        <button type="submit" class="btn btn-gold" id="btnSave" data-i18n="save"></button>
+        <button type="button" class="btn btn-secondary" id="btnCancel" data-i18n="cancel"></button>
+        <button type="submit" class="btn btn-main" id="btnSave" data-i18n="save"></button>
       </div>
     </form>
   </dialog>
